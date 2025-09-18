@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.2965ecfffb16484aae5c6012ea36b0c3',
+  appId: 'app.lovable.weblive3dmagic',
   appName: 'web-live-3d-magic',
   webDir: 'dist',
   server: {
