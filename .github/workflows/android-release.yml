@@ -46,6 +46,44 @@ jobs:
     - name: Build web app
       run: npm run build
       
+    - name: Backup custom Android files
+      run: |
+        echo "💾 Backing up custom Android files..."
+        mkdir -p /tmp/android-backup
+        
+        # Backup custom files if they exist
+        if [ -f "android/LiveWallpaperService.java" ]; then
+          cp android/LiveWallpaperService.java /tmp/android-backup/
+          echo "✅ LiveWallpaperService.java backed up"
+        fi
+        
+        if [ -f "android/wallpaper_service.xml" ]; then
+          cp android/wallpaper_service.xml /tmp/android-backup/
+          echo "✅ wallpaper_service.xml backed up"
+        fi
+        
+        if [ -f "android/variables.gradle" ]; then
+          cp android/variables.gradle /tmp/android-backup/
+          echo "✅ variables.gradle backed up"
+        fi
+        
+        if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
+          cp android/app/src/main/AndroidManifest.xml /tmp/android-backup/
+          echo "✅ AndroidManifest.xml backed up"
+        fi
+        
+        if [ -f "android/app/proguard-rules.pro" ]; then
+          cp android/app/proguard-rules.pro /tmp/android-backup/
+          echo "✅ proguard-rules.pro backed up"
+        fi
+        
+        if [ -d "android/app/src/main/res/xml" ]; then
+          cp -r android/app/src/main/res/xml /tmp/android-backup/
+          echo "✅ XML resources backed up"
+        fi
+        
+        echo "✅ Android files backup completed"
+        
     - name: Setup Android platform
       run: |
         echo "🔧 Setting up Android platform..."
@@ -56,43 +94,50 @@ jobs:
         npx cap add android
         echo "✅ Android platform added successfully"
       
-    - name: Copy custom Android files
+    - name: Restore custom Android files
       run: |
-        echo "📂 Copying custom Android files..."
+        echo "📂 Restoring custom Android files..."
         
-        # Verify source files exist
-        if [ ! -f "android/app/build.gradle" ]; then
-          echo "❌ Source build.gradle not found"
-          exit 1
+        # Restore LiveWallpaperService.java
+        if [ -f "/tmp/android-backup/LiveWallpaperService.java" ]; then
+          mkdir -p android/app/src/main/java/app/lovable/weblive3dmagic
+          cp /tmp/android-backup/LiveWallpaperService.java android/app/src/main/java/app/lovable/weblive3dmagic/
+          echo "✅ LiveWallpaperService.java restored"
         fi
         
-        # Copy build configuration
-        cp android/app/build.gradle android/app/build.gradle.backup
-        cp android/app/build.gradle android/app/build.gradle
-        
-        # Copy variables.gradle if exists
-        if [ -f "android/variables.gradle" ]; then
-          cp android/variables.gradle android/variables.gradle
-        fi
-        
-        # Copy AndroidManifest.xml
-        if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
-          cp android/app/src/main/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
-        fi
-        
-        # Copy LiveWallpaperService.java
-        if [ -f "android/LiveWallpaperService.java" ]; then
-          mkdir -p android/app/src/main/java/app/lovable/web_live_3d_magic
-          cp android/LiveWallpaperService.java android/app/src/main/java/app/lovable/web_live_3d_magic/
-        fi
-        
-        # Copy wallpaper service XML
-        if [ -f "android/wallpaper_service.xml" ]; then
+        # Restore wallpaper service XML
+        if [ -f "/tmp/android-backup/wallpaper_service.xml" ]; then
           mkdir -p android/app/src/main/res/xml
-          cp android/wallpaper_service.xml android/app/src/main/res/xml/
+          cp /tmp/android-backup/wallpaper_service.xml android/app/src/main/res/xml/
+          echo "✅ wallpaper_service.xml restored"
         fi
         
-        echo "✅ Custom Android files copied successfully"
+        # Restore variables.gradle
+        if [ -f "/tmp/android-backup/variables.gradle" ]; then
+          cp /tmp/android-backup/variables.gradle android/
+          echo "✅ variables.gradle restored"
+        fi
+        
+        # Restore AndroidManifest.xml
+        if [ -f "/tmp/android-backup/AndroidManifest.xml" ]; then
+          cp /tmp/android-backup/AndroidManifest.xml android/app/src/main/
+          echo "✅ AndroidManifest.xml restored"
+        fi
+        
+        # Restore proguard-rules.pro
+        if [ -f "/tmp/android-backup/proguard-rules.pro" ]; then
+          cp /tmp/android-backup/proguard-rules.pro android/app/
+          echo "✅ proguard-rules.pro restored"
+        fi
+        
+        # Restore XML resources
+        if [ -d "/tmp/android-backup/xml" ]; then
+          mkdir -p android/app/src/main/res/xml
+          cp -r /tmp/android-backup/xml/* android/app/src/main/res/xml/
+          echo "✅ XML resources restored"
+        fi
+        
+        echo "✅ Custom Android files restored successfully"
       
     - name: Sync Capacitor
       run: |
