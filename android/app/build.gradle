@@ -1,0 +1,146 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace "app.lovable.web_live_3d_magic"
+    compileSdk 35
+    
+    defaultConfig {
+        applicationId "app.lovable.web_live_3d_magic"
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName "1.0.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Enable vector drawables
+        vectorDrawables.useSupportLibrary = true
+        
+        // Android 15 optimizations
+        multiDexEnabled true
+        
+        // Performance optimizations
+        ndk {
+            abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            
+            // Android 15 release optimizations
+            shrinkResources true
+            debuggable false
+            jniDebuggable false
+            renderscriptDebuggable false
+            zipAlignEnabled true
+            
+            // Performance optimizations
+            manifestPlaceholders = [
+                clearTextTrafficPermitted: "false"
+            ]
+        }
+        
+        debug {
+            debuggable true
+            minifyEnabled false
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            
+            manifestPlaceholders = [
+                clearTextTrafficPermitted: "true"
+            ]
+        }
+    }
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
+    }
+    
+    buildFeatures {
+        buildConfig true
+        viewBinding true
+    }
+    
+    // Android 15 packaging options
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/DEPENDENCIES']
+            excludes += ['META-INF/LICENSE']
+            excludes += ['META-INF/LICENSE.txt']
+            excludes += ['META-INF/NOTICE']
+            excludes += ['META-INF/NOTICE.txt']
+        }
+    }
+    
+    // Lint options for Android 15
+    lintOptions {
+        checkReleaseBuilds false
+        abortOnError false
+        disable 'InvalidPackage'
+    }
+}
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    
+    // AndroidX Core Libraries - Android 15 compatible
+    implementation "androidx.appcompat:appcompat:1.7.0"
+    implementation "androidx.core:core-ktx:1.13.1"
+    implementation "androidx.activity:activity:1.9.1"
+    implementation "androidx.fragment:fragment:1.8.2"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:1.2.0"
+    
+    // Capacitor Core
+    implementation project(':capacitor-android')
+    implementation project(':capacitor-app')
+    implementation project(':capacitor-browser')
+    implementation project(':capacitor-device')
+    implementation project(':capacitor-haptics')
+    implementation project(':capacitor-preferences')
+    
+    // WebView and Hardware Acceleration - Android 15 optimized
+    implementation "androidx.webkit:webkit:1.11.0"
+    
+    // Material Design Components
+    implementation "com.google.android.material:material:1.12.0"
+    
+    // Splash Screen API for Android 12+
+    implementation "androidx.core:core-splashscreen:1.0.1"
+    
+    // Core library desugaring for modern Java features
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"
+    
+    // MultiDex support
+    implementation "androidx.multidex:multidex:2.0.1"
+    
+    // Performance and Memory
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.8.4"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4"
+    
+    // Testing
+    testImplementation "junit:junit:4.13.2"
+    androidTestImplementation "androidx.test.ext:junit:1.2.1"
+    androidTestImplementation "androidx.test.espresso:espresso-core:3.6.1"
+    androidTestImplementation "androidx.test:runner:1.6.1"
+    androidTestImplementation "androidx.test:rules:1.6.1"
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
