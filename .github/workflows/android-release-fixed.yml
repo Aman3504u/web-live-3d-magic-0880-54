@@ -1,0 +1,162 @@
+name: Android Release (Fixed & Optimized)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Setup Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        cmdline-tools-version: 11076708
+        packages: 'platform-tools platforms;android-34 build-tools;34.0.0 platforms;android-33'
+        
+    - name: Accept Android SDK licenses
+      run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+      
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build web app
+      run: npm run build
+      
+    - name: Setup Android platform (clean)
+      run: |
+        echo "🔧 Setting up Android platform..."
+        rm -rf android
+        npx cap add android
+        echo "✅ Android platform added successfully"
+        
+    - name: Sync Capacitor
+      run: |
+        echo "🔄 Syncing Capacitor..."
+        npx cap sync android
+        echo "✅ Capacitor sync completed"
+        
+    - name: Fix Android Build Configuration
+      run: |
+        echo "⚙️ Fixing Android build configuration..."
+        
+        # Fix build.gradle to prevent common issues
+        cat > android/app/build.gradle << 'EOF'
+        apply plugin: 'com.android.application'
+
+        android {
+            namespace "app.lovable.77ef1998e786419f844f5e2a97bc1754"
+            compileSdk 34
+            
+            defaultConfig {
+                applicationId "app.lovable.77ef1998e786419f844f5e2a97bc1754"
+                minSdk 22
+                targetSdk 34
+                versionCode 1
+                versionName "1.0"
+                testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+            }
+            
+            buildTypes {
+                release {
+                    minifyEnabled false
+                    proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                }
+            }
+            
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
+            }
+            
+            packagingOptions {
+                pickFirst '**/libc++_shared.so'
+                pickFirst '**/libjsc.so'
+            }
+        }
+
+        repositories {
+            google()
+            mavenCentral()
+        }
+
+        dependencies {
+            implementation 'androidx.appcompat:appcompat:1.6.1'
+            implementation 'com.google.android.material:material:1.11.0'
+            implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+            implementation project(':capacitor-android')
+            testImplementation 'junit:junit:4.13.2'
+            androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+            androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+        }
+
+        apply from: 'capacitor.build.gradle'
+        
+        try {
+            def servicesJSON = file('google-services.json')
+            if (servicesJSON.text) {
+                apply plugin: 'com.google.gms.google-services'
+            }
+        } catch (Exception e) {
+            logger.info "google-services.json not found, skipping Firebase setup"
+        }
+        EOF
+        
+        echo "✅ Android build configuration fixed"
+        
+    - name: Clean and Build Android APK
+      run: |
+        echo "🔨 Building Android APK..."
+        cd android
+        chmod +x gradlew
+        ./gradlew clean --no-daemon
+        ./gradlew assembleDebug --no-daemon --stacktrace
+        
+        if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+          echo "✅ APK built successfully"
+          ls -la app/build/outputs/apk/debug/
+        else
+          echo "❌ APK build failed"
+          exit 1
+        fi
+        
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: android/app/build/outputs/apk/debug/app-debug.apk
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
