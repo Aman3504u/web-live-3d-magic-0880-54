@@ -43,13 +43,11 @@ jobs:
     - name: Build web app
       run: npm run build
       
-    - name: Copy Android files
+    - name: Setup Android platform
       run: |
-        mkdir -p android/app/src/main
-        cp -r android/* android/ || true
-      
-    - name: Add Android platform
-      run: npx cap add android
+        # Remove existing android directory if it exists to avoid conflicts
+        rm -rf android
+        npx cap add android
       
     - name: Copy custom Android files
       run: |
