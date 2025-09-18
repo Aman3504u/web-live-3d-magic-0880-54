@@ -1,0 +1,145 @@
+name: Android Release (Fixed & Optimized)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Setup Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        cmdline-tools-version: 11076708
+        packages: 'platform-tools platforms;android-35 build-tools;35.0.0 platforms;android-34 platforms;android-33'
+        
+    - name: Accept Android SDK licenses
+      run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+      
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build web app
+      run: npm run build
+      
+    - name: Setup Android platform (clean)
+      run: |
+        echo "🔧 Setting up Android platform..."
+        rm -rf android
+        npx cap add android
+        echo "✅ Android platform added successfully"
+        
+    - name: Sync Capacitor
+      run: |
+        echo "🔄 Syncing Capacitor..."
+        npx cap sync android
+        echo "✅ Capacitor sync completed"
+        
+    - name: Fix Android Build Configuration
+      run: |
+        echo "⚙️ Patching Android build files (non-destructive)..."
+        
+        # Ensure Android platform exists
+        test -d android || npx cap add android
+        
+        # Show versions for debugging
+        node -v
+        java -version
+        echo "ANDROID_HOME=$ANDROID_HOME"
+        
+        # Update compileSdk/targetSdk to 35 and ensure Java 17 in app/build.gradle
+        if [ -f android/app/build.gradle ]; then
+          echo "Updating compileSdk/targetSdk to 35 and Java 17 compatibility"
+          sed -i.bak -E 's/compileSdk\s+[0-9]+/compileSdk 35/' android/app/build.gradle || true
+          sed -i.bak -E 's/targetSdk\s+[0-9]+/targetSdk 35/' android/app/build.gradle || true
+          sed -i.bak -E 's/(sourceCompatibility\s+)JavaVersion\.VERSION_[0-9]+/\1JavaVersion.VERSION_17/' android/app/build.gradle || true
+          sed -i.bak -E 's/(targetCompatibility\s+)JavaVersion\.VERSION_[0-9]+/\1JavaVersion.VERSION_17/' android/app/build.gradle || true
+        else
+          echo "android/app/build.gradle not found yet (will be created by Capacitor)."
+        fi
+        
+        # Do NOT overwrite AndroidManifest.xml to avoid merger conflicts
+        echo "Keeping the Capacitor-generated AndroidManifest.xml to avoid merger conflicts."
+        
+        # Print current manifest head for visibility
+        if [ -f android/app/src/main/AndroidManifest.xml ]; then
+          echo "--- AndroidManifest.xml (first 80 lines) ---"
+          sed -n '1,80p' android/app/src/main/AndroidManifest.xml || true
+        fi
+        
+        echo "✅ Android build configuration patched"
+
+    - name: Clean and Build Android APK
+      run: |
+        echo "🔨 Building Android APK..."
+        cd android
+        chmod +x gradlew
+        ./gradlew clean --no-daemon
+        
+        # Run manifest processing first to surface merger issues early
+        ./gradlew :app:processDebugMainManifest --no-daemon --stacktrace --info || true
+        if [ -f "app/build/intermediates/merged_manifests/debug/AndroidManifest.xml" ]; then
+          echo "---- Merged Manifest (first 200 lines) ----"
+          sed -n '1,200p' app/build/intermediates/merged_manifests/debug/AndroidManifest.xml || true
+        fi
+        
+        # Build with verbose logs; on failure dump diagnostics
+        ./gradlew assembleDebug --no-daemon --stacktrace --info || {
+          echo "❌ assembleDebug failed. Showing diagnostics..."
+          ./gradlew :app:dependencies --configuration debugRuntimeClasspath || true
+          if [ -f "app/build/outputs/logs/manifest-merger-debug-report.txt" ]; then
+            echo "---- Manifest Merger Report ----"
+            sed -n '1,200p' app/build/outputs/logs/manifest-merger-debug-report.txt || true
+          fi
+          exit 1
+        }
+        
+        if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+          echo "✅ APK built successfully"
+          ls -la app/build/outputs/apk/debug/
+        else
+          echo "❌ APK build failed"
+          exit 1
+        fi
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: android/app/build/outputs/apk/debug/app-debug.apk
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
