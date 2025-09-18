@@ -135,30 +135,66 @@ export function BuildInstructions() {
         </div>
       </Card>
 
-      {/* Export Instructions */}
+      {/* GitHub Actions Build */}
       <Card className="p-6 bg-primary/5 border-primary/20">
         <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
           <GitBranch className="w-5 h-5 text-primary" />
-          Export to GitHub First
+          Automated GitHub Build
         </h3>
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Before building locally, you need to export this project to your GitHub repository:
+            This project includes automated APK building via GitHub Actions. Simply create a release to trigger the build:
           </p>
-          <div className="flex items-center gap-3 p-4 rounded-lg bg-background/50 border border-border/30">
-            <div className="p-2 rounded bg-primary/20">
-              <Download className="w-4 h-4 text-primary" />
+          
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-border/30">
+              <div className="p-2 rounded bg-primary/20">
+                <Download className="w-4 h-4 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">1. Export to GitHub</p>
+                <p className="text-xs text-muted-foreground">Use "Export to GitHub" in your Lovable project</p>
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-foreground">Use "Export to GitHub" button</p>
-              <p className="text-xs text-muted-foreground">Find it in the top-right menu of your Lovable project</p>
+            
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-border/30">
+              <div className="p-2 rounded bg-accent/20">
+                <GitBranch className="w-4 h-4 text-accent" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">2. Create Release Tag</p>
+                <p className="text-xs text-muted-foreground">Push a git tag like "v1.0.0" or use GitHub releases</p>
+              </div>
             </div>
-            <Button variant="outline" size="sm" className="text-xs">
-              <ExternalLink className="w-3 h-3 mr-1" />
-              How to Export
-            </Button>
+            
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-border/30">
+              <div className="p-2 rounded bg-accent/20">
+                <Smartphone className="w-4 h-4 text-accent" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">3. Download APK</p>
+                <p className="text-xs text-muted-foreground">GitHub Actions will build and attach APK to the release</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-3 rounded-lg bg-accent/10 border border-accent/20">
+            <p className="text-xs text-accent font-medium">
+              💡 Pro tip: The workflow builds both debug and optimized release APKs automatically!
+            </p>
           </div>
         </div>
+      </Card>
+
+      {/* Manual Build Instructions */}
+      <Card className="p-6 bg-background/30 border-border/50">
+        <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+          <Terminal className="w-5 h-5 text-primary" />
+          Manual Local Build (Alternative)
+        </h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Use the commands above if you prefer to build locally or need to customize the build process.
+        </p>
       </Card>
 
       {/* Expected Result */}
